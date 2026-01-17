@@ -6,6 +6,10 @@ import waitress
 from flask import Flask, Response, make_response, render_template, request
 
 from icloudpd.status import Status, StatusExchange
+from .auth import auth_bp, set_status_exchange
+from .config import config_bp
+from .download import download_bp
+from .api import api_bp
 
 
 def serve_app(logger: Logger, _status_exchange: StatusExchange) -> None:
@@ -17,9 +21,30 @@ def serve_app(logger: Logger, _status_exchange: StatusExchange) -> None:
         app.template_folder = os.path.join(bundle_dir, "templates")
         app.static_folder = os.path.join(bundle_dir, "static")
 
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(config_bp)
+    app.register_blueprint(download_bp)
+    app.register_blueprint(api_bp)
+
+    # Set status exchange for auth blueprint
+    set_status_exchange(_status_exchange)
+
     @app.route("/")
     def index() -> Response | str:
-        return render_template("index.html")
+        return render_template("dashboard.html")
+
+    @app.route("/config")
+    def config_page() -> Response | str:
+        return render_template("config.html")
+
+    @app.route("/download")
+    def download_page() -> Response | str:
+        return render_template("download.html")
+
+    @app.route("/directory")
+    def directory_page() -> Response | str:
+        return render_template("directory.html")
 
     @app.route("/status", methods=["GET"])
     def get_status() -> Response | str:

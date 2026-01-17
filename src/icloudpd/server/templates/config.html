@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iCloud Photos Downloader - Configuration</title>
+    <link href="/static/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="/static/htmx/v2.0.0/htmx.min.js"></script>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">iCloud Photos Downloader</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/config">Configuration</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/directory">Directory</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/download">Download</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Download Configuration</h1>
+        <form hx-post="/api/config/save" hx-swap="innerHTML" hx-target="#config-form">
+            <ul class="nav nav-tabs" id="configTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">Basic</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab">Advanced</button>
+                </li>
+            </ul>
+            <div class="tab-content" id="configTabsContent">
+                <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                    <div class="mt-3">
+                        <h3>Basic Configuration</h3>
+                        <div class="mb-3">
+                            <label for="watch_interval" class="form-label">Watch Interval (seconds)</label>
+                            <input type="number" class="form-control" id="watch_interval" name="watch_interval" value="3600">
+                            <div class="form-text">How often to check for new photos.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="album" class="form-label">Album Selection</label>
+                            <select class="form-select" id="album" name="album" multiple>
+                                <option value="all">All Albums</option>
+                                <!-- TODO: Populate with actual albums -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="folder_structure" class="form-label">Folder Structure</label>
+                            <input type="text" class="form-control" id="folder_structure" name="folder_structure" value="{:%Y/%m/%d}">
+                            <div class="form-text">Template for organizing downloaded photos.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Auto-Sync Strategy</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sync_strategy" id="copy" value="copy" checked>
+                                <label class="form-check-label" for="copy">
+                                    Copy Only - Download new photos, don't delete
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sync_strategy" id="sync" value="sync">
+                                <label class="form-check-label" for="sync">
+                                    Sync - Match deletions from iCloud
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sync_strategy" id="move" value="move">
+                                <label class="form-check-label" for="move">
+                                    Move - Delete old photos from iCloud
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="advanced" role="tabpanel">
+                    <div class="mt-3">
+                        <h3>Advanced Configuration</h3>
+                        <div class="accordion" id="advancedAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#photoTypes">
+                                        Photo & Video Types
+                                    </button>
+                                </h2>
+                                <div id="photoTypes" class="accordion-collapse collapse" data-bs-parent="#advancedAccordion">
+                                    <div class="accordion-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="skip_photos" name="skip_photos">
+                                            <label class="form-check-label" for="skip_photos">
+                                                Skip Photos
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="skip_videos" name="skip_videos">
+                                            <label class="form-check-label" for="skip_videos">
+                                                Skip Videos
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="skip_live_photos" name="skip_live_photos">
+                                            <label class="form-check-label" for="skip_live_photos">
+                                                Skip Live Photos
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="align_raw" class="form-label">RAW Treatment</label>
+                                            <select class="form-select" id="align_raw" name="align_raw">
+                                                <option value="as-is">As-is</option>
+                                                <option value="original">Original</option>
+                                                <option value="alternative">Alternative</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filtering">
+                                        Filtering & Selection
+                                    </button>
+                                </h2>
+                                <div id="filtering" class="accordion-collapse collapse" data-bs-parent="#advancedAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <label for="recent" class="form-label">Download Recent Photos</label>
+                                            <input type="number" class="form-control" id="recent" name="recent" placeholder="Number of recent photos">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="until_found" class="form-label">Download Until Found</label>
+                                            <input type="number" class="form-control" id="until_found" name="until_found" placeholder="Number of consecutive found">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="skip_created_before" class="form-label">Skip Created Before</label>
+                                            <input type="datetime-local" class="form-control" id="skip_created_before" name="skip_created_before">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="skip_created_after" class="form-label">Skip Created After</label>
+                                            <input type="datetime-local" class="form-control" id="skip_created_after" name="skip_created_after">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Save Configuration</button>
+            <button type="button" class="btn btn-secondary mt-3 ms-2" onclick="saveProfile()">Save Profile</button>
+            <button type="button" class="btn btn-info mt-3 ms-2" onclick="loadProfile()">Load Profile</button>
+        </form>
+        <div id="config-form"></div>
+    </div>
+
+    <script src="/static/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+    <script>
+        function saveProfile() {
+            const name = prompt('Enter profile name:');
+            if (name) {
+                const form = document.querySelector('form');
+                const data = new FormData(form);
+                const config = {};
+                for (let [key, value] of data.entries()) {
+                    if (config[key]) {
+                        if (Array.isArray(config[key])) {
+                            config[key].push(value);
+                        } else {
+                            config[key] = [config[key], value];
+                        }
+                    } else {
+                        config[key] = value;
+                    }
+                }
+                fetch(`/api/config/profiles/${name}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                }).then(response => response.json()).then(data => alert('Profile saved'));
+            }
+        }
+
+        function loadProfile() {
+            fetch('/api/config/profiles')
+                .then(response => response.json())
+                .then(profiles => {
+                    const name = prompt('Select profile: ' + profiles.join(', '));
+                    if (name && profiles.includes(name)) {
+                        fetch(`/api/config/profiles/${name}`, {method: 'POST'})
+                            .then(response => response.json())
+                            .then(data => {
+                                alert('Profile loaded');
+                                location.reload();
+                            });
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

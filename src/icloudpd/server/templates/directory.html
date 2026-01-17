@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iCloud Photos Downloader - Directory Selection</title>
+    <link href="/static/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="/static/htmx/v2.0.0/htmx.min.js"></script>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">iCloud Photos Downloader</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/config">Configuration</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/directory">Directory</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/download">Download</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Directory Selection</h1>
+        <div class="row">
+            <div class="col-md-4">
+                <h3>Quick Paths</h3>
+                <div id="quick-paths">
+                    <!-- Quick paths will be loaded here -->
+                </div>
+            </div>
+            <div class="col-md-8">
+                <h3>File Browser</h3>
+                <div class="mb-3">
+                    <label for="current-path" class="form-label">Current Path</label>
+                    <input type="text" class="form-control" id="current-path" value="/" readonly>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-secondary" onclick="goUp()">Parent Directory</button>
+                </div>
+                <div id="file-list" class="list-group" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Files and folders will be listed here -->
+                </div>
+            </div>
+        </div>
+        <div class="mt-4">
+            <h3>Selected Directory</h3>
+            <div class="card">
+                <div class="card-body">
+                    <p><strong>Path:</strong> <span id="selected-path">None</span></p>
+                    <p><strong>Available Space:</strong> <span id="available-space">Unknown</span></p>
+                    <button class="btn btn-primary" id="confirm-btn" disabled onclick="confirmSelection()">Confirm Selection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+    <script>
+        let currentPath = '/';
+        let selectedPath = null;
+
+        function loadQuickPaths() {
+            fetch('/api/config/quick-paths')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('quick-paths');
+                    container.innerHTML = '';
+                    data.forEach(path => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-outline-primary mb-2 w-100';
+                        btn.textContent = path.name;
+                        btn.onclick = () => navigateTo(path.path);
+                        container.appendChild(btn);
+                    });
+                });
+        }
+
+        function loadFiles(path) {
+            fetch(`/api/filesystem/browse?path=${encodeURIComponent(path)}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('current-path').value = data.path;
+                    currentPath = data.path;
+                    const container = document.getElementById('file-list');
+                    container.innerHTML = '';
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                        li.innerHTML = `
+                            <div>
+                                <i class="bi ${item.is_dir ? 'bi-folder' : 'bi-file-earmark'}"></i>
+                                ${item.name}
+                            </div>
+                            <small class="text-muted">${item.is_dir ? '' : formatSize(item.size)}</small>
+                        `;
+                        if (item.is_dir) {
+                            li.onclick = () => selectDirectory(item.path);
+                            li.ondblclick = () => navigateTo(item.path);
+                        }
+                        container.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error loading files:', error));
+        }
+
+        function navigateTo(path) {
+            loadFiles(path);
+        }
+
+        function goUp() {
+            const parts = currentPath.split('/').filter(p => p);
+            if (parts.length > 0) {
+                parts.pop();
+                const newPath = '/' + parts.join('/');
+                navigateTo(newPath || '/');
+            }
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function selectDirectory(path) {
+            selectedPath = path;
+            document.getElementById('selected-path').textContent = path;
+            document.getElementById('confirm-btn').disabled = false;
+            // Load disk space
+            fetch(`/api/filesystem/disk-space?path=${encodeURIComponent(path)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const available = formatSize(data.available);
+                    const total = formatSize(data.total);
+                    document.getElementById('available-space').textContent = `${available} / ${total}`;
+                });
+        }
+
+        function confirmSelection() {
+            const path = document.getElementById('selected-path').textContent;
+            if (path !== 'None') {
+                // Save to config
+                fetch('/api/config/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({directory: path})
+                }).then(() => alert('Directory saved'));
+            }
+        }
+
+        // Load initial data
+        loadQuickPaths();
+        loadFiles(currentPath);
+    </script>
+</body>
+</html>
